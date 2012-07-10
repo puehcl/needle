@@ -1,9 +1,13 @@
 import socket
+import protocol
 
 
 ADDR 		=	"127.0.0.1"
 PORT 		= 	20000
 
+
+VERSION		=	0.1
+TYPE		=	protocol.CLIENT
 
 
 def setup_socket(address, port):
@@ -15,6 +19,8 @@ def setup_socket(address, port):
 if __name__ == "__main__":
 	
 	sock = setup_socket(ADDR, PORT)
+
+	sock.send("%s\n%s" % (VERSION,TYPE))
 	print "socket set up"
 	sock.close()
 	print "socket closed"
