@@ -1,13 +1,14 @@
 import socket
 import protocol
 
+class VersionInfo:
+	VERSION		=	0.1
+	COMPATIBLE_WITH	=	0.1
 
-ADDR 		=	"127.0.0.1"
+ADDR 		=	"orion.uberspace.de"
 PORT 		= 	20000
 
-
-VERSION		=	0.1
-TYPE		=	protocol.HOST
+TYPE		=	protocol.Type.HOST
 
 
 def setup_socket(address, port):
@@ -19,8 +20,15 @@ def setup_socket(address, port):
 if __name__ == "__main__":
 	
 	sock = setup_socket(ADDR, PORT)
-
-	sock.send("%s\n%s" % (VERSION,TYPE))
 	print "socket set up"
-	sock.close()
-	print "socket closed"
+
+	sock.send("%s\n%s" % (VersionInfo.VERSION, TYPE))
+	
+
+	re = sock.recv(1024)
+	print "received info"
+	print re	
+
+	while True:
+		pass
+
