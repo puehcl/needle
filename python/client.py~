@@ -59,7 +59,7 @@ if __name__ == "__main__":
 		time.sleep(wait_time)	
 		
 	print "tunnel stable to client at", expected_client_addr, "success"
-	print "you can now type messages to the other client"
+	print "you may now type messages to the other client"
 	
 	while True:
 		sock.sendto(raw_input(), expected_client_addr)
