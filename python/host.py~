@@ -8,10 +8,7 @@ import packet
 seq_number = 1;
 expected_ack_number = 1
 
-class ControlListener(threading.Thread):
-	'''
-	listens for incoming packets from the mediator
-	'''
+class Listener(threading.Thread):
 
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -34,8 +31,8 @@ class ControlListener(threading.Thread):
 if __name__ == "__main__":
 	sock = utils.UDPSocket();
 	
-	clistener = ControlListener()
-	clistener.start()
+	listener = Listener()
+	listener.start()
 	
 	while True:
 		print "sending register packet"

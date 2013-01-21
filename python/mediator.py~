@@ -1,6 +1,8 @@
 
 import socket
+
 import utils
+import packet
 
 local_port = 20000
 
@@ -17,7 +19,9 @@ if __name__ == "__main__":
 	while True:
 		data, addr = sock.recvfrom(65535)
 		
-		print "received", data, "from", addr
+		pack = packet.getPacket(data)
+		
+		print "received", repr(pack), "from", addr
 		
 		if host_addr == None:
 			host_addr = addr
@@ -29,5 +33,8 @@ if __name__ == "__main__":
 			
 			sock.sendto(str(addr[0]) + "\n" + str(addr[1]), host_addr)
 			print "sent", str(addr[0]) + "\n" + str(addr[1]), "to", host_addr, "(host)"
+			
+			host_addr = None
 	
 	sock.close()
+	
