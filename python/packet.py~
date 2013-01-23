@@ -1,3 +1,5 @@
+import re
+
 import utils
 
 
@@ -62,6 +64,46 @@ def getNackData(pack):
 '''
 
 '''
+	FROM SERVER
+'''
+def getServerHostOpenPacket(number, reference):
+	'''
+	PAYLOAD		[ REFERENCE_NR (32 bit) ]
+	'''
+	payload = utils.putInteger(b"", reference)
+	return Packet(TYPE_CONTROL, SUBTYPE_SERVER_HOST_OPEN, number, payload)
+
+def getServerHostOpenData(pack):
+	return utils.getInteger(pack.payload)
+	
+	
+def get_server_agent_connect_packet(number, agent):
+	payload = b""
+
+	utils.putText(payload, agent[0], 64)		# name
+	addrbytes = re.split("[.]", agent[1])		# ip
+	for b in addrbytes:					
+		utils.putByte(payload, int(b))
+	utils.putInteger(payload, int(agent[2]))		# port
+	
+	return Packet(TYPE_CONTROL, SUBTYPE_SERVER_AGENT_CONNECT, number, payload)
+	
+def get_server_agent_connect_data(pack):
+
+	hostname = utils.getText(pack.payload, 64)
+	ip = ""
+	for i in range(3):
+		ip = ip + str(utils.getByte(pack.payload[64 + i:])) + "."
+	ip = ip + str(utils.getByte(pack.payload[64 + 3:]))
+	port = utils.getInteger(pack.payload[64 + 4:])
+		
+	return hostname, ip, port
+	
+'''
+	FROM SERVER END
+'''
+
+'''
 	HOST TO SERVER
 '''
 def getHostServerRegisterPacket(number, hostname, service):
@@ -80,40 +122,46 @@ def getHostServerRegisterPacket(number, hostname, service):
 def getHostServerRegisterData(pack):
 	return utils.getText(pack.payload, 64), utils.getText(pack.payload[64:], 64)
 
-def getHostServerReadyPacket(number, hostname, service):
+def getHostServerReadyPacket(number, reference):
 	'''
-	PAYLOAD		[ HOSTNAME (64 Byte) | SERVICENAME (64 Byte) ]
+	PAYLOAD		[ REFERENCE_NR (32 Bit) ]
 	'''
-	if len(hostname) > 32:
-		raise ValueError("hostname must be 32 characters or less")
-	if len(service) > 32:
-		raise ValueError("service must be 32 characters or less")
-	hname = utils.putText(b"", hostname, 64)
-	serv = utils.putText(b"", service, 64)
-	payload = hname + serv
-	return Packet(TYPE_CONTROL, SUBTYPE_SERVER_HOST_OPEN, number, payload)
+	payload = utils.putInteger(b"", reference)
+	return Packet(TYPE_CONTROL, SUBTYPE_HOST_SERVER_RDY, number, payload)
 	
-def getHostServerReadyPacket(pack):
-	return utils.getText(pack.payload, 64), utils.getText(pack.payload[64:], 64)
+def getHostServerReadyData(pack):
+	return utils.getInteger(pack.payload)
 
 '''
 	HOST TO SERVER END
 '''
 
 '''
-	SERVER TO HOST
+	CLIENT TO SERVER
 '''
-def getServerHostOpenPacket(number):
+def get_client_server_req_host_packet(number, clientname, hostname, service):
 	'''
-	PAYLOAD		[ ]
+	PAYLOAD		[ CLIENTNAME (64 byte) | SERVICENAME (64 byte) | HOSTNAME (64 byte)]
 	'''
-	return Packet(TYPE_CONTROL, SUBTYPE_SERVER_HOST_OPEN, number, b"")
+	if len(clientname) > 32:
+		raise ValueError("hostname must be 32 characters or less")
+	if len(hostname) > 32:
+		raise ValueError("hostname must be 32 characters or less")
+	if len(service) > 32:
+		raise ValueError("service must be 32 characters or less")
+		
+	cname = utils.putText(b"", clientname, 64)
+	hname = utils.putText(b"", hostname, 64)
+	serv = utils.putText(b"", service, 64)
 
-def getServerHostOpenData(pack):
-	return b""
+	payload = cname + hname + serv
+	return Packet(TYPE_CONTROL, SUBTYPE_CLIENT_SERVER_REQ_HOST, number, payload)
+	
+def get_client_server_req_host_data(pack):
+	return 	utils.getText(pack.payload, 64), utils.getText(pack.payload[64:], 64), utils.getText(pack.payload[128:], 64)
 	
 '''
-	SERVER TO HOST END
+	CLIENT TO SERVER END
 '''
 
 class Packet:

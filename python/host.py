@@ -3,6 +3,7 @@ import time
 import threading
 import signal
 import sys
+import socket
 
 import utils
 import packet
@@ -11,6 +12,7 @@ import data
 seq_number = 1;
 expected_ack_number = 1
 
+clistener = None
 active_processes = []
 
 def shutdown_handler(signal, frame):
@@ -18,6 +20,10 @@ def shutdown_handler(signal, frame):
 		process.shutdown()
 		process.join()
 		print "process", process.name, "shut down"
+	if clistener:
+		clistener.shutdown()
+		clistener.join()
+		print "listener shut down"
 	sys.exit(0)
 
 class ControlListener(threading.Thread):
@@ -25,13 +31,21 @@ class ControlListener(threading.Thread):
 	listens for incoming packets from the mediator
 	'''
 
-	def __init__(self):
+	def __init__(self, sock):
 		threading.Thread.__init__(self)
+		self.shutdown_ = False
+		self.sock = sock
 		self.setDaemon(True)
 		
 	def run(self):
-		while True:
-			pack, addr = sock.recvfrom(65535)
+		self.sock.settimeout(1)
+	
+		while not self.shutdown_:
+			try:
+				pack, addr = self.sock.recvfrom(65535)
+			except socket.timeout:
+				continue
+				
 			if pack.maintype != packet.TYPE_CONTROL:
 				continue
 				
@@ -41,19 +55,23 @@ class ControlListener(threading.Thread):
 				print "received 'nack' packet", repr(pack)
 			elif pack.subtype == packet.SUBTYPE_SERVER_HOST_OPEN:
 				print "received 'open' packet", repr(pack), "spawning child process"
-				channel = data.HostDataChannel("channel", "testhost", "testservice", ("127.0.0.1", 20000), ("relay.net", 10000))
+				reference = packet.getServerHostOpenData(pack)
+				channel = data.HostDataChannel("channel", reference, ("127.0.0.1", 20000), ("relay.net", 10000))
 				channel.start()
 				active_processes.append(channel)
 			else:
 				print "received unexpected packet", repr(pack)
 				
+	def shutdown(self):
+		self.shutdown_ = True
+		self.sock.close()
 
 if __name__ == "__main__":
 	signal.signal(signal.SIGINT, shutdown_handler)
 
 	sock = utils.UDPSocket();
 	
-	clistener = ControlListener()
+	clistener = ControlListener(sock)
 	clistener.start()
 	
 	while True:

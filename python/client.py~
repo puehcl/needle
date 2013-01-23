@@ -1,75 +1,82 @@
-
-import sys
 import time
 import threading
+import signal
+import sys
+import socket
 
 import utils
+import packet
+import data
 
-remote_host = "pueh.at"
-remote_port = 20000
+seq_number = 1;
+expected_ack_number = 1
 
-expected_client_addr = None
+clistener = None
+active_processes = []
 
-class STATE:
-	stage1 = False
-	stage2 = False
-	shutdown = False
+def shutdown_handler(signal, frame):
+	for process in active_processes:
+		process.shutdown()
+		process.join()
+		print "process", process.name, "shut down"
+	if clistener:
+		clistener.shutdown()
+		clistener.join()
+		print "listener shut down"
+	sys.exit(0)
 
-def listen():
-	while not STATE.shutdown:
-		data, addr = sock.recvfrom(65535)
-		if addr[0] == expected_client_addr[0]:				# has to be other client
-			if not STATE.stage1:
-				STATE.stage1 = True
-			elif not STATE.stage2:
-				if data == "success":
-					STATE.stage2 = True
-			else:
-				print data
+class ControlListener(threading.Thread):
+	'''
+	listens for incoming packets from the mediator
+	'''
+
+	def __init__(self, sock):
+		threading.Thread.__init__(self)
+		self.shutdown_ = False
+		self.sock = sock
+		self.setDaemon(True)
 		
+	def run(self):
+		self.sock.settimeout(1)
+	
+		while not self.shutdown_:
+			try:
+				pack, addr = self.sock.recvfrom(65535)
+			except socket.timeout:
+				continue
+				
+			if pack.maintype != packet.TYPE_CONTROL:
+				continue
+				
+			if pack.subtype == packet.SUBTYPE_AGENT_AGENT_ACK:
+				print "received 'ack' packet", repr(pack)
+			elif pack.subtype == packet.SUBTYPE_AGENT_AGENT_NACK:
+				print "received 'nack' packet", repr(pack)
+			elif pack.subtype == packet.SUBTYPE_SERVER_AGENT_CONNECT:
+				print "received 'connect' packet", repr(pack)
+				hostname, ip, port = packet.get_server_agent_connect_data(pack)
+				print hostname, ip, port
+			else:
+				print "received unexpected packet", repr(pack)
+				
+	def shutdown(self):
+		self.shutdown_ = True
+		self.sock.close()
 
 if __name__ == "__main__":
-	sock = utils.UDPSocket()
-	remote_addr = (remote_host, remote_port)
+	signal.signal(signal.SIGINT, shutdown_handler)
+
+	sock = utils.UDPSocket();
 	
-	
-	print "socket created on", sock.getsockname()
-	
-	sock.sendto("test", remote_addr)
-	data, addr = sock.recvfrom(65535)
-	cl_addr = data.split("\n")
-	print "client address:", cl_addr
-	expected_client_addr = (cl_addr[0], int(cl_addr[1]))
-	
-	listen_thread = threading.Thread(target=listen)
-	listen_thread.setDaemon(True)
-	listen_thread.start()
-	
-	wait_time = 1
-	while not STATE.stage1:
-		print "sending connecting to remote client"
-		sock.sendto("connecting", expected_client_addr)	
-		time.sleep(wait_time)
-		
-	print "received packet from remote client"
-		
-	while not STATE.stage2:
-		print "sending success to remote client"
-		sock.sendto("success", expected_client_addr)
-		time.sleep(wait_time)	
-		
-	print "tunnel stable to client at", expected_client_addr, "success"
-	print "you may now type messages to the other client"
+	clistener = ControlListener(sock)
+	clistener.start()
 	
 	while True:
-		sock.sendto(raw_input(), expected_client_addr)
 	
-	print "exiting"
-	
-	STATE.shutdown = True
-	sock.close()
-	listen_thread.join()
-	
-	
+		print "sending register packet"
+		pack = packet.getHostServerRegisterPacket(seq_number, "testhost", "testservice") 
+		sock.sendto(pack, ("127.0.0.1", 20000))
+		expected_ack_number = seq_number
+		time.sleep(60)
 	
 	

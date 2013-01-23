@@ -11,11 +11,10 @@ class HostDataChannel(multiprocessing.Process):
 	RECONNECT_RETRY_COUNT = 5		
 	RECONNECT_RETRY_TIMEOUT = 30	#seconds
 
-	def __init__(self, processname, hostname, servicename, mediator_address, relay_address):
+	def __init__(self, processname, reference, mediator_address, relay_address):
 		multiprocessing.Process.__init__(self, name=processname)
 		self.shutdown_ = False
-		self.hostname = hostname
-		self.servicename = servicename
+		self.reference = reference
 		self.mediator_address = mediator_address
 		self.relay_address = relay_address
 		self.udp_sock = None
@@ -41,7 +40,7 @@ class HostDataChannel(multiprocessing.Process):
 				return
 			
 			print "getting rdy packet"
-			rdy = packet.getHostServerReadyPacket(0, self.hostname, self.servicename)
+			rdy = packet.getHostServerReadyPacket(0, self.reference)
 			self.udp_sock.sendto(rdy, self.mediator_address)
 			
 			print "rdy packet sent to", self.mediator_address
@@ -53,6 +52,9 @@ class HostDataChannel(multiprocessing.Process):
 				continue
 			except socket.error as se:
 				print "an error has occured while listening for packets:", repr(se)
+				
+			print "received packet:", repr(pack)
+			break
 				
 				
 	def shutdown(self):
