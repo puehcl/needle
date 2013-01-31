@@ -11,9 +11,6 @@ PACKET_SIZE		= 512
 HEADER_LENGTH 	= 10
 PAYLOAD_SIZE	= PACKET_SIZE - HEADER_LENGTH
 
-TYPE_CONTROL	= 1
-TYPE_DATA		= 2
-
 SUBTYPE_HOST_SERVER_REGISTER	= 1		# registration as host of specific service at server
 SUBTYPE_HOST_SERVER_RDY			= 4		# socket created and ready to receive client addr
 

@@ -1,9 +1,10 @@
 import threading
 import time
 
+import protocol.constants as const
 import protocol.socketutils as utils
 import protocol.packet as packet
-import protocol.exchange as ex
+import protocol.register as reg
 
 local_port = 20000
 
@@ -53,7 +54,7 @@ class Watchdog(threading.Thread):
 		self.lock = lock
 		self.terminate = False
 		self.setDaemon(True)
-		self.pack = packet.Packet(header=packet.Header(packet.TYPE_CONTROL, ex.SUBTYPE_ALIVE, 1))
+		self.pack = packet.Packet(header=packet.Header(const.TYPE_CONTROL, const.SUBTYPE_ALIVE, 1))
 
 	def run(self):
 		while not self.terminate:
@@ -98,13 +99,13 @@ if __name__ == "__main__":
 		pack, addr = sock.recvfrom(65535)	
 		print "received", repr(pack), "from", addr
 		
-		if pack.maintype != packet.TYPE_CONTROL:			#mediator doesn't handle data packets
+		if pack.maintype != const.TYPE_CONTROL:			#mediator doesn't handle data packets
 			print "not a control packet, continue"
 			continue
 			
-		if pack.subtype == ex.SUBTYPE_REGISTER:
-			hostname = pack[ex.SPECTYPE_HOSTNAME][0].value
-			servicename = pack[ex.SPECTYPE_SERVICENAME][0].value
+		if pack.subtype == const.SUBTYPE_REGISTER:
+			hostname = pack[const.SPECTYPE_HOSTNAME][0].value
+			servicename = pack[const.SPECTYPE_SERVICENAME][0].value
 
 			if not servicename in hosts_by_service:
 				hosts_by_service[servicename] = []
@@ -116,19 +117,19 @@ if __name__ == "__main__":
 			hostlock.release()
 			print "host", hostname, "registered for service", servicename
 		
-			ack_header = packet.Header(packet.TYPE_CONTROL, ex.SUBTYPE_ACK, 1)
+			ack_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_ACK, 1)
 			ack_packet = packet.Packet(ack_header)
-			ack_packet.put_long(ex.SEPCTYPE_ACK_SEQ_NR, pack.number)
+			ack_packet.put_long(const.SEPCTYPE_ACK_SEQ_NR, pack.number)
 			sock.sendto(ack_packet, addr)
 			print "sent", repr(ack_packet), "to", addr, "(host)"
 			
-		elif pack.subtype == ex.SUBTYPE_ACK:
+		elif pack.subtype == const.SUBTYPE_ACK:
 			if addr in hosts_by_address:
 				host = hosts_by_address[addr]
 				host.increment()
 			
 			
-		elif pack.subtype == packet.SUBTYPE_HOST_SERVER_RDY:
+		elif pack.subtype == const.SUBTYPE_HOST_SERVER_RDY:
 			reference = packet.getHostServerReadyData(pack)
 			
 			if not reference in agents_by_reference:

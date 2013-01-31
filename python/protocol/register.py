@@ -5,6 +5,7 @@ import Queue
 import time
 
 import packet
+import constants as const
 
 QUEUE_TIMEOUT = 0.5
 SOCKET_TIMEOUT = 0.5
@@ -14,20 +15,9 @@ MEDIATOR_REGISTER_TIMEOUT = 5
 
 MEDIATOR_COMM_TIMEOUT = 60
 
-PACKET_SIZE = 400
 
-SUBTYPE_REGISTER = 1
-SUBTYPE_ALIVE	 = 2
-SUBTYPE_ACK		 = 3
 
-SPECTYPE_HOSTNAME 		= 1
-SPECTYPE_SERVICENAME 	= 2
-SEPCTYPE_ACK_SEQ_NR		= 3
-
-LEN_HOSTNAME 	= 64
-LEN_SERVICENAME = 64
-
-class ExchangeProtocolListener(threading.Thread):
+class RegisterProtocolListener(threading.Thread):
 	
 	def __init__(self, sock, mediator_address, requests):
 		threading.Thread.__init__(self)
@@ -42,10 +32,10 @@ class ExchangeProtocolListener(threading.Thread):
 		
 		while not self.terminate:
 			try:
-				pack, addr = self.sock.recvfrom(PACKET_SIZE)	
+				pack, addr = self.sock.recvfrom(65535)	
 				if addr != self.mediator_address:		
 					continue
-				if pack.maintype != packet.TYPE_CONTROL:
+				if pack.maintype != const.TYPE_CONTROL:
 					continue
 				self.requests.put(pack)	
 			except socket.timeout:
@@ -59,7 +49,7 @@ class ExchangeProtocolListener(threading.Thread):
 			
 	
 
-class ExchangeProtocolManager(threading.Thread):
+class RegisterProtocolManager(threading.Thread):
 
 	def __init__(self, sock, mediator_address, hostname, servicename):
 		threading.Thread.__init__(self)
@@ -74,18 +64,18 @@ class ExchangeProtocolManager(threading.Thread):
 		self.setDaemon(True)
 		
 	def run(self):
-		self.listener = ExchangeProtocolListener(	self.sock, 
+		self.listener = RegisterProtocolListener(	self.sock, 
 													self.mediator_address, 
 													self.requests)										
 		self.listener.start()
 		
 		register_seq_nr = 1
-		register_header = packet.Header(packet.TYPE_CONTROL, SUBTYPE_REGISTER, register_seq_nr)
+		register_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_REGISTER, register_seq_nr)
 		register_packet = packet.Packet(register_header)
-		register_packet.put_string(SPECTYPE_HOSTNAME, self.hostname, LEN_HOSTNAME)
-		register_packet.put_string(SPECTYPE_SERVICENAME, self.servicename, LEN_SERVICENAME)
+		register_packet.put_string(const.SPECTYPE_HOSTNAME, self.hostname, const.LEN_HOSTNAME)
+		register_packet.put_string(const.SPECTYPE_SERVICENAME, self.servicename, const.LEN_SERVICENAME)
 		
-		ack_header = packet.Header(packet.TYPE_CONTROL, SUBTYPE_ACK, 1)
+		ack_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_ACK, 1)
 		
 		# send register packet
 		self.sock.sendto(register_packet, self.mediator_address)
@@ -104,20 +94,20 @@ class ExchangeProtocolManager(threading.Thread):
 				
 				# if registration not yet acknowledged
 				if not register_success:
-					if not request.subtype == SUBTYPE_ACK:
+					if not request.subtype == const.SUBTYPE_ACK:
 						continue
 					
-					ack_nr = request[SEPCTYPE_ACK_SEQ_NR][0].value
+					ack_nr = request[const.SEPCTYPE_ACK_SEQ_NR][0].value
 					if ack_nr == register_seq_nr:
 						register_success = True
 						print "register success"
 						
 					continue
 					
-				if request.subtype == SUBTYPE_ALIVE:
+				if request.subtype == const.SUBTYPE_ALIVE:
 					pack = packet.Packet(ack_header)
 					ack_header = ack_header.incremented()
-					pack.put_long(SEPCTYPE_ACK_SEQ_NR, request.number)
+					pack.put_long(const.SEPCTYPE_ACK_SEQ_NR, request.number)
 					self.sock.sendto(pack, self.mediator_address)
 					print "alive ack sent"
 					

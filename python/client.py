@@ -1,12 +1,13 @@
 import time
 import threading
+import multiprocessing
 import signal
 import sys
 import socket
 
-import utils
-import packet
-import data
+import protocol.constants as const
+import protocol.socketutils as utils
+import protocol.packet as packet
 
 clistener = None
 active_processes = []
@@ -22,16 +23,19 @@ def shutdown_handler(signal, frame):
 		print "listener shut down"
 	sys.exit(0)
 
-class ControlListener(threading.Thread):
+class ClientDataProvider(multiprocessing.Process):
 	'''
 	listens for incoming packets from the mediator
 	'''
 
-	def __init__(self, sock):
-		threading.Thread.__init__(self)
-		self.shutdown_ = False
+	def __init__(self, sock, clientname, hostname, servicename, mediator_address):
+		multiprocessing.Process.__init__(self)
+		self.terminate = False
 		self.sock = sock
-		self.setDaemon(True)
+		self.clientname = clientname
+		self.hostname = hostname
+		self.servicename = servicename
+		self.mediator_address = mediator_address
 		
 	def run(self):
 		self.sock.settimeout(1)
@@ -57,7 +61,7 @@ class ControlListener(threading.Thread):
 				print "received unexpected packet", repr(pack)
 				
 	def shutdown(self):
-		self.shutdown_ = True
+		self.terminate = True
 		self.sock.close()
 
 if __name__ == "__main__":
