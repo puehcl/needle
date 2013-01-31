@@ -1,18 +1,19 @@
 
 import time
 import threading
+import multiprocessing
 import signal
 import sys
 import socket
 
-import utils
-import packet
-import data
+import protocol.socketutils as utils
+import protocol.packet as packet
+import protocol.exchange as ex
 
 seq_number = 1;
 expected_ack_number = 1
 
-clistener = None
+ex_handler = None
 active_processes = []
 
 def shutdown_handler(signal, frame):
@@ -20,67 +21,80 @@ def shutdown_handler(signal, frame):
 		process.shutdown()
 		process.join()
 		print "process", process.name, "shut down"
-	if clistener:
-		clistener.shutdown()
-		clistener.join()
-		print "listener shut down"
+	if ex_handler:
+		ex_handler.shutdown()
+		ex_handler.join()
+		print "exchange handler shut down"
 	sys.exit(0)
 
-class ControlListener(threading.Thread):
-	'''
-	listens for incoming packets from the mediator
-	'''
+class HostDataChannel(multiprocessing.Process):
 
-	def __init__(self, sock):
-		threading.Thread.__init__(self)
+	RECONNECT_RETRY_COUNT = 5		
+	RECONNECT_RETRY_TIMEOUT = 30	#seconds
+
+	def __init__(self, processname, reference, mediator_address, relay_address):
+		multiprocessing.Process.__init__(self, name=processname)
 		self.shutdown_ = False
-		self.sock = sock
-		self.setDaemon(True)
+		self.reference = reference
+		self.mediator_address = mediator_address
+		self.relay_address = relay_address
+		self.udp_sock = None
 		
 	def run(self):
-		self.sock.settimeout(1)
-	
-		while not self.shutdown_:
+		print "channel", self.name, "active"
+		try:
+			self.udp_sock = utils.UDPSocket()
+		except socket.error as se:
+			print "an error has occured while creating the socket:", repr(se)
+			return
+		
+		self.udp_sock.settimeout(HostDataChannel.RECONNECT_RETRY_TIMEOUT)
+		
+		tries = 0
+		while True:
+			
+			if self.shutdown_:
+				return
+			
+			if tries >= HostDataChannel.RECONNECT_RETRY_COUNT:
+				print "maximum retries reached, connection to server lost, returning"
+				return
+			
+			print "getting rdy packet"
+			rdy = packet.getHostServerReadyPacket(0, self.reference)
+			self.udp_sock.sendto(rdy, self.mediator_address)
+			
+			print "rdy packet sent to", self.mediator_address
+			
 			try:
-				pack, addr = self.sock.recvfrom(65535)
-			except socket.timeout:
+				pack, addr = self.udp_sock.recvfrom(65535)
+			except socket.timeout as to:
+				tries = tries + 1
 				continue
+			except socket.error as se:
+				print "an error has occured while listening for packets:", repr(se)
 				
-			if pack.maintype != packet.TYPE_CONTROL:
-				continue
-				
-			if pack.subtype == packet.SUBTYPE_AGENT_AGENT_ACK:
-				print "received 'ack' packet", repr(pack)
-			elif pack.subtype == packet.SUBTYPE_AGENT_AGENT_NACK:
-				print "received 'nack' packet", repr(pack)
-			elif pack.subtype == packet.SUBTYPE_SERVER_HOST_OPEN:
-				print "received 'open' packet", repr(pack), "spawning child process"
-				reference = packet.getServerHostOpenData(pack)
-				channel = data.HostDataChannel("channel", reference, ("127.0.0.1", 20000), ("relay.net", 10000))
-				channel.start()
-				active_processes.append(channel)
-			else:
-				print "received unexpected packet", repr(pack)
-				
+			print "received packet:", repr(pack)
+			break
+						
 	def shutdown(self):
 		self.shutdown_ = True
-		self.sock.close()
+		if self.udp_sock:
+			self.udp_sock.close()
+			
 
 if __name__ == "__main__":
 	signal.signal(signal.SIGINT, shutdown_handler)
 
 	sock = utils.UDPSocket();
 	
-	clistener = ControlListener(sock)
-	clistener.start()
-	
+	ex_handler = ex.ExchangeProtocolManager(sock, ("127.0.0.1", 20000), "testhost", "testservice")
+	ex_handler.start()
 	while True:
-	
-		print "sending register packet"
-		pack = packet.getHostServerRegisterPacket(seq_number, "testhost", "testservice") 
-		sock.sendto(pack, ("127.0.0.1", 20000))
-		expected_ack_number = seq_number
-		time.sleep(60)
+		identifier = ex_handler.next_open_request()
+		if not identifier:
+			break
+		print "got open request:", identifier
 		
 
 

@@ -1,31 +1,8 @@
 
-import time
-import threading
 import multiprocessing
-import signal
-import sys
+import utils
 import socket
-
-import protocol.socketutils as utils
-import protocol.packet as packet
-import protocol.exchange as ex
-
-seq_number = 1;
-expected_ack_number = 1
-
-ex_handler = None
-active_processes = []
-
-def shutdown_handler(signal, frame):
-	for process in active_processes:
-		process.shutdown()
-		process.join()
-		print "process", process.name, "shut down"
-	if ex_handler:
-		ex_handler.shutdown()
-		ex_handler.join()
-		print "exchange handler shut down"
-	sys.exit(0)
+import packet
 
 class HostDataChannel(multiprocessing.Process):
 
@@ -81,18 +58,3 @@ class HostDataChannel(multiprocessing.Process):
 		self.shutdown_ = True
 		if self.udp_sock:
 			self.udp_sock.close()
-			
-
-if __name__ == "__main__":
-	signal.signal(signal.SIGINT, shutdown_handler)
-
-	sock = utils.UDPSocket();
-	
-	ex_handler = ex.ExchangeProtocolManager(sock, ("127.0.0.1", 20000), "testhost", "testservice")
-	ex_handler.start()
-	while True:
-		identifier = ex_handler.next_open_request()
-		print "got open request:", identifier
-		
-
-
