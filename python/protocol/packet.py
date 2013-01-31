@@ -77,8 +77,9 @@ class Packet:
 		
 	def __len__(self):
 		length = HEADER_LENGTH
-		for value in self.data.itervalues():
-			length = 2 + value[1]
+		for val_list in self.data.itervalues():
+			for item in val_list:
+				length = length + len(item)
 		return length
 		
 	def __getitem__(self, key):
@@ -141,10 +142,23 @@ class Packet:
 			self.data[specific_type] = []
 		self.data[specific_type].append(utils.TLV(utils.DATATYPE_LONG, specific_type, utils.BYTE_LENGTH_LONG, value))
 		
-	def put_string(self, specific_type, value, length):
+	def put_string(self, specific_type, value, length=0):
 		if not specific_type in self.data:
 			self.data[specific_type] = []
+		if length == 0:
+			length = len(value) * utils.BYTE_LENGTH_CHAR
 		self.data[specific_type].append(utils.TLV(utils.DATATYPE_STRING, specific_type, length, value))
+		
+	def put_byte_sequence(self, specific_type, value, length=0):
+		if not specific_type in self.data:
+			self.data[specific_type] = []
+		if length == 0:
+			length = len(value)
+		self.data[specific_type].append(utils.TLV(utils.DATATYPE_BYTE_SEQ, specific_type, length, value))
+		
+	def put_ip(self, specific_type, value):
+		single_bytes = [int(b) for b in value.split(".")]
+		self.put_byte_sequence(specific_type, single_bytes)
 		
 	def put_bytestring(self, specific_type, value, length):
 		if not specific_type in self.data:

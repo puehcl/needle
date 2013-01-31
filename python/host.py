@@ -59,21 +59,27 @@ class HostDataProvider(multiprocessing.Process):
 				return
 			
 			print "getting rdy packet"
-			rdy = packet.getHostServerReadyPacket(0, self.reference)
-			self.udp_sock.sendto(rdy, self.mediator_address)
+			rdy_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_HOST_READY, 1)
+			rdy_packet = packet.Packet(rdy_header)
+			
+			rdy_packet.put_int(const.SPECTYPE_REFERENCE_NR, self.reference)
+			
+			self.udp_sock.sendto(rdy_packet, self.mediator_address)
 			
 			print "rdy packet sent to", self.mediator_address
 			
-			try:
-				pack, addr = self.udp_sock.recvfrom(65535)
-			except socket.timeout as to:
-				tries = tries + 1
-				continue
-			except socket.error as se:
-				print "an error has occured while listening for packets:", repr(se)
+			# start data protocol
+			while not self.terminate:
+				try:
+					pack, addr = self.udp_sock.recvfrom(65535)
+				except socket.timeout as to:
+					tries = tries + 1
+					continue
+				except socket.error as se:
+					print "an error has occured while listening for packets:", repr(se)
 				
-			print "received packet:", repr(pack)
-			break
+				print "received packet:", repr(pack)
+
 						
 	def shutdown(self):
 		self.terminate = True

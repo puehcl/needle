@@ -9,7 +9,11 @@ import protocol.constants as const
 import protocol.socketutils as utils
 import protocol.packet as packet
 
-clistener = None
+
+REQ_TIMEOUT = 5
+REQ_RETRIES = 5
+
+dataprovider = None
 active_processes = []
 
 def shutdown_handler(signal, frame):
@@ -17,15 +21,15 @@ def shutdown_handler(signal, frame):
 		process.shutdown()
 		process.join()
 		print "process", process.name, "shut down"
-	if clistener:
-		clistener.shutdown()
-		clistener.join()
+	if dataprovider:
+		dataprovider.shutdown()
+		dataprovider.join()
 		print "listener shut down"
 	sys.exit(0)
 
 class ClientDataProvider(multiprocessing.Process):
 	'''
-	listens for incoming packets from the mediator
+	queries the mediator for a host address and establishes a connection to that host
 	'''
 
 	def __init__(self, sock, clientname, hostname, servicename, mediator_address):
@@ -38,27 +42,50 @@ class ClientDataProvider(multiprocessing.Process):
 		self.mediator_address = mediator_address
 		
 	def run(self):
-		self.sock.settimeout(1)
+		self.sock.settimeout(REQ_TIMEOUT)
 	
-		while not self.shutdown_:
-			try:
-				pack, addr = self.sock.recvfrom(65535)
-			except socket.timeout:
-				continue
-				
-			if pack.maintype != packet.TYPE_CONTROL:
-				continue
-				
-			if pack.subtype == packet.SUBTYPE_AGENT_AGENT_ACK:
-				print "received 'ack' packet", repr(pack)
-			elif pack.subtype == packet.SUBTYPE_AGENT_AGENT_NACK:
-				print "received 'nack' packet", repr(pack)
-			elif pack.subtype == packet.SUBTYPE_SERVER_AGENT_CONNECT:
-				print "received 'connect' packet", repr(pack)
-				hostname, ip, port = packet.get_server_agent_connect_data(pack)
-				print hostname, ip, port
-			else:
-				print "received unexpected packet", repr(pack)
+		req_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_REQ_HOST, 1)
+		req_packet = packet.Packet(req_header)
+		req_packet.put_string(const.SPECTYPE_CLIENTNAME, self.clientname, const.LEN_CLIENTNAME)
+		req_packet.put_string(const.SPECTYPE_HOSTNAME, self.hostname, const.LEN_HOSTNAME)
+		req_packet.put_string(const.SPECTYPE_SERVICENAME, self.servicename, const.LEN_SERVICENAME)
+		
+		last_req_time = 0
+		response = None
+		
+		tries = 0
+		while tries < REQ_RETRIES and not self.terminate:
+			self.sock.sendto(req_packet, self.mediator_address)
+			last_req_time = time.time()
+			while not self.terminate:
+				try:
+					pack, addr = self.sock.recvfrom(65535)
+					if pack.maintype == const.TYPE_CONTROL:
+						if pack.subtype == const.SUBTYPE_AGENT_ADDR:
+							response = pack
+							break
+						elif pack.subtype == const.SUBTYPE_NACK:
+							print "server sent nack, so such host/service available"
+							self.shutdown()
+							return
+				except socket.timeout:
+					pass
+					
+				req_delta = time.time() - last_req_time					# break loop to try again 
+				if req_delta >= REQ_TIMEOUT:
+					break
+			if response:												
+				break
+					
+			tries = tries + 1
+					
+		if not response:
+			print "mediator did not answer, aborting"
+			self.shutdown()
+			return
+		
+		print "mediator sent agent info:", response
+	
 				
 	def shutdown(self):
 		self.terminate = True
@@ -69,16 +96,10 @@ if __name__ == "__main__":
 
 	sock = utils.UDPSocket();
 	
-	clistener = ControlListener(sock)
-	clistener.start()
+	dataprovider = ClientDataProvider(sock, "testclient", "testhost", "testservice", ("127.0.0.1", 20000))
+	dataprovider.start()
 	
-	while True:
-	
-		print "sending request packet"
-		pack = packet.get_client_server_req_host_packet(0, "client", "testhost", "testservice")
-		sock.sendto(pack, ("127.0.0.1", 20000))
-
-		time.sleep(60)
+	dataprovider.join()
 	
 	
 	

@@ -6,7 +6,8 @@ DATATYPE_CHAR 		= 2
 DATATYPE_INT  		= 3
 DATATYPE_LONG 		= 4
 DATATYPE_STRING 	= 5
-DATATYPE_BYTESTRING = 6
+DATATYPE_BYTE_SEQ 	= 6
+DATATYPE_BYTESTRING = 7
 
 BYTE_LENGTH_BYTE = 1
 BYTE_LENGTH_CHAR = 2
@@ -16,7 +17,7 @@ BYTE_LENGTH_LONG = 8
 TLV_DATATYPE_POS = 0
 TLV_SPECTYPE_POS = 1
 TLV_LENGTH_POS	 = 2
-TLV_DATA_POS	 = 4
+TLV_DATA_POS	 = 6
 
 
 class TLV:
@@ -30,13 +31,16 @@ class TLV:
 	def __eq__(self, value):
 		return self.value == value
 		
+	def __len__(self):
+		return TLV_DATA_POS + self.length
+		
 	def __repr__(self):
 		return "(" + str(self.datatype) + ", " + str(self.spectype) + ", " + str(self.length) + ", " + str(self.value) + ")"	
 	
 	def to_byte_string(self):
 		dt = byte_to_raw(self.datatype)
 		st = byte_to_raw(self.spectype)
-		le = char_to_raw(self.length)
+		le = int_to_raw(self.length)
 		if self.datatype == DATATYPE_BYTE:				
 			val = byte_to_raw(self.value)
 		elif self.datatype == DATATYPE_CHAR:
@@ -47,6 +51,10 @@ class TLV:
 			val = long_to_raw(self.value)
 		elif self.datatype == DATATYPE_STRING:	
 			val = string_to_raw(self.value, self.length)
+		elif self.datatype == DATATYPE_BYTE_SEQ:
+			val = b""
+			for i in range(self.length):
+				val = val + byte_to_raw(self.value[i])	
 		else:
 			val = self.value
 		return dt + st + le + val
@@ -127,7 +135,7 @@ def tlv_from_raw(data, offset):
 		
 	datatype = byte_from_raw(data, offset + TLV_DATATYPE_POS)
 	specific_type = byte_from_raw(data, offset + TLV_SPECTYPE_POS)
-	length = char_from_raw(data, offset + TLV_LENGTH_POS)
+	length = int_from_raw(data, offset + TLV_LENGTH_POS)
 	
 	offset = offset + TLV_DATA_POS
 	if datatype == DATATYPE_BYTE:				
@@ -145,6 +153,12 @@ def tlv_from_raw(data, offset):
 	elif datatype == DATATYPE_STRING:
 		le = length
 		value = string_from_raw(data, length, offset)
+	elif datatype == DATATYPE_BYTE_SEQ:
+		le = length
+		value = []
+		for i in range(length):
+			value.append(byte_from_raw(data, offset))
+			offset = offset + BYTE_LENGTH_BYTE
 	else:			
 		le = length								
 		value = data[offset:(offset + length)]

@@ -104,12 +104,17 @@ class RegisterProtocolManager(threading.Thread):
 						
 					continue
 					
-				if request.subtype == const.SUBTYPE_ALIVE:
+				elif request.subtype == const.SUBTYPE_ALIVE:
 					pack = packet.Packet(ack_header)
 					ack_header = ack_header.incremented()
 					pack.put_long(const.SEPCTYPE_ACK_SEQ_NR, request.number)
 					self.sock.sendto(pack, self.mediator_address)
 					print "alive ack sent"
+					
+				elif request.subtype == const.SUBTYPE_HOST_OPEN:
+					ref_nr = request[const.SPECTYPE_REFERENCE_NR][0].value
+					print "adding open request to queue", ref_nr
+					self.open_requests.put(ref_nr)
 					
 				#if open request
 				#add request to open_requests

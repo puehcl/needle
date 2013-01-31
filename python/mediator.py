@@ -12,7 +12,7 @@ hosts_by_service = {}
 hosts_by_address = {}
 agents_by_reference = {}
 
-ref = 0
+ref = 1
 
 class Host:
 
@@ -128,37 +128,16 @@ if __name__ == "__main__":
 				host = hosts_by_address[addr]
 				host.increment()
 			
+		elif pack.subtype == const.SUBTYPE_REQ_HOST:
+			clientname = pack[const.SPECTYPE_CLIENTNAME][0].value
+			hostname = pack[const.SPECTYPE_HOSTNAME][0].value
+			servicename = pack[const.SPECTYPE_SERVICENAME][0].value
 			
-		elif pack.subtype == const.SUBTYPE_HOST_SERVER_RDY:
-			reference = packet.getHostServerReadyData(pack)
-			
-			if not reference in agents_by_reference:
-				continue
-				
-			agents = agents_by_reference[reference]
-			host = agents[0]
-			client = agents[1]
-			
-			if not host.addr[0] == addr[0]:
-				print "wrong host ip"
-				continue
-				
-			tohost = packet.get_server_agent_connect_packet(0, (client.clientname, client.addr[0], client.addr[1]))
-			toclient = packet.get_server_agent_connect_packet(0, (host.hostname, host.addr[0], host.addr[1]))
-			
-			sock.sendto(tohost, addr)
-			sock.sendto(toclient, client.addr)
-			print "sent connect packets"
-			
-		elif pack.subtype == packet.SUBTYPE_CLIENT_SERVER_REQ_HOST:
-		
-			clientname, hostname, service = packet.get_client_server_req_host_data(pack)
-			
-			if not service in hosts_by_service:
+			if not servicename in hosts_by_service:
 				continue
 				
 			host = None
-			for h in hosts_by_service[service]:
+			for h in hosts_by_service[servicename]:
 			
 				if h.hostname == hostname:
 					host = h
@@ -172,9 +151,47 @@ if __name__ == "__main__":
 			
 			agents_by_reference[reference] = (host, Client(clientname, addr))
 			
-			op = packet.getServerHostOpenPacket(0, reference)
-			sock.sendto(op, host.addr)
-			print "sent", repr(op), "to", host.addr, "(host)"
+			ref_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_HOST_OPEN, 1)
+			ref_packet = packet.Packet(ref_header)
+			
+			ref_packet.put_int(const.SPECTYPE_REFERENCE_NR, reference)
+			
+			sock.sendto(ref_packet, host.addr)
+			print "sent", repr(ref_packet), "to", host.addr, "(host)"
+			
+		elif pack.subtype == const.SUBTYPE_HOST_READY:
+			reference_nr = pack[const.SPECTYPE_REFERENCE_NR][0].value
+			
+			if not reference in agents_by_reference:
+				nack_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_NACK, 1)
+				nack_packet = packet.Packet(nack_header)
+				nack_packet.put_long(const.SPECTYPE_NACK_SEQ_NR, pack.number)
+				sock.sendto(nack_packet, addr)
+				continue
+				
+			agents = agents_by_reference[reference]
+			host = agents[0]
+			client = agents[1]
+			
+			if not host.addr[0] == addr[0]:
+				print "wrong host ip"
+				continue
+				
+			host_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_AGENT_ADDR, 1)
+			host_packet = packet.Packet(host_header)
+			host_packet.put_ip(const.SPECTYPE_AGENT_IP, client.addr[0])
+			host_packet.put_int(const.SPECTYPE_AGENT_PORT, client.addr[1])
+			
+			client_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_AGENT_ADDR, 1)
+			client_packet = packet.Packet(client_header)
+			client_packet.put_ip(const.SPECTYPE_AGENT_IP, addr[0])
+			client_packet.put_int(const.SPECTYPE_AGENT_PORT, addr[1])
+			
+			sock.sendto(host_packet, addr)
+			sock.sendto(client_packet, client.addr)
+			print "sent connect packets"
+			
+		
 			
 	sock.close()
 	
