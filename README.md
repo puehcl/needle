@@ -1,4 +1,4 @@
 needle
 ======
 
-[Hot Needle Of Inquiry] TCP/UDP hole punching tool
+[Hot Needle Of Inquiry] UDP hole punching tool

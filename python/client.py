@@ -8,7 +8,7 @@ import socket
 import protocol.constants as const
 import protocol.socketutils as utils
 import protocol.packet as packet
-
+import protocol.sting as sting
 
 REQ_TIMEOUT = 5
 REQ_RETRIES = 5
@@ -65,7 +65,7 @@ class ClientDataProvider(multiprocessing.Process):
 							response = pack
 							break
 						elif pack.subtype == const.SUBTYPE_NACK:
-							print "server sent nack, so such host/service available"
+							print "server sent nack, no so such host/service available"
 							self.shutdown()
 							return
 				except socket.timeout:
@@ -86,6 +86,15 @@ class ClientDataProvider(multiprocessing.Process):
 		
 		print "mediator sent agent info:", response
 	
+		ip_bytes = response[const.SPECTYPE_AGENT_IP][0].value
+		port = response[const.SPECTYPE_AGENT_PORT][0].value
+		ip = ".".join([str(b) for b in ip_bytes])
+	
+		datastream = sting.StreamManager(self.sock, (ip, port))
+		datastream.start()
+		
+		datastream.shutdown()
+		datastream.join()
 				
 	def shutdown(self):
 		self.terminate = True
