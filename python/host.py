@@ -5,6 +5,7 @@ import multiprocessing
 import signal
 import sys
 import socket
+import Queue
 
 import protocol.constants as const
 import protocol.socketutils as utils
@@ -12,21 +13,9 @@ import protocol.packet as packet
 import protocol.register as reg
 import protocol.sting as sting
 
-seq_number = 1;
-expected_ack_number = 1
-
-reg_handler = None
-channels = []
-
 def shutdown_handler(signal, frame):
-	for channel in channels:
-		channel.shutdown()
-		channel.join()
-		print "process", channel.name, "shut down"
-	if reg_handler:
-		reg_handler.shutdown()
-		reg_handler.join()
-		print "registration handler shut down"
+	host.shutdown()
+	host.join()
 	sys.exit(0)
 
 class HostDataProvider(multiprocessing.Process):
@@ -41,11 +30,13 @@ class HostDataProvider(multiprocessing.Process):
 		self.mediator_address = mediator_address
 		self.relay_address = relay_address
 		self.sock = None
+		self.relay_socket = None
 		
 	def run(self):
 		print "channel", self.name, "active"
 		try:
 			self.sock = utils.UDPSocket()
+			self.relay_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		except socket.error as se:
 			print "an error has occured while creating the socket:", repr(se)
 			return
@@ -87,9 +78,19 @@ class HostDataProvider(multiprocessing.Process):
 		port = client_info[const.SPECTYPE_AGENT_PORT][0].value
 		ip = ".".join([str(b) for b in ip_bytes])
 				
-		datastream = sting.StreamManager(self.sock, (ip, port), host=True)
+		datastream = sting.StreamManager(self.sock, (ip, port))
 		datastream.start()
 		
+		self.relay_socket.connect(self.relay_address)
+		
+		while not self.terminate:
+			print "reading data from datastream"
+			data = datastream.recv()
+			if not data:
+				print "datastream returned not, connection closed"
+				self.shutdown()
+				break
+			self.relay_socket.send(data)
 					
 		datastream.shutdown()
 		datastream.join()
@@ -118,25 +119,71 @@ class HostDataProvider(multiprocessing.Process):
 		self.terminate = True
 		if self.sock:
 			self.sock.close()
+		if self.relay_socket:
+			self.relay_socket.close()
 			
+
+class NeedleHost(threading.Thread):
+
+	def __init__(self, mediator_address, relay_address, hostname, servicename):
+		threading.Thread.__init__(self)
+		self.mediator_address = mediator_address
+		self.relay_address = relay_address
+		self.hostname = hostname
+		self.servicename = servicename
+		self.terminate = False
+		self.reg_handler = None
+		self.channels = []
+		self.setDaemon(True)
+		
+	def run(self):
+		self.sock = utils.UDPSocket();
+	
+		self.reg_handler = reg.RegisterProtocolManager(self.sock, self.mediator_address, self.hostname, self.servicename)
+		self.reg_handler.start()
+		while not self.terminate:
+			identifier = self.reg_handler.next_open_request()
+			if not identifier:
+				break
+			if self.terminate:
+				break
+			print "got open request:", identifier
+		
+			child = HostDataProvider("testprovider", identifier, self.mediator_address, self.relay_address)
+			child.start()
+			self.channels.append(child)
+
+	def shutdown(self):
+		self.terminate = True
+		if self.reg_handler:
+			print "shutting down register handler"
+			self.reg_handler.shutdown()
+			self.reg_handler.join()
+		for channel in self.channels:
+			print "shutting down channel"
+			channel.shutdown()
+			channel.join()
+		
 
 if __name__ == "__main__":
 	signal.signal(signal.SIGINT, shutdown_handler)
 
-	sock = utils.UDPSocket();
-	
-	reg_handler = reg.RegisterProtocolManager(sock, ("127.0.0.1", 20000), "testhost", "testservice")
-	reg_handler.start()
+	local_address = ("127.0.0.1", 10001)
+	mediator_address = ("127.0.0.1", 20000)
+
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.bind(local_address)
+	sock.listen(5)
+
+	host = NeedleHost(mediator_address, local_address, "testhost", "testservice")
+	host.start()
+		
+	tup = sock.accept()
+	actual = tup[0]
+	print "got socket, reading..."
 	while True:
-		identifier = reg_handler.next_open_request()
-		if not identifier:
-			break
-		print "got open request:", identifier
-		
-		child = HostDataProvider("testprovider", identifier, ("127.0.0.1", 20000), None)
-		child.start()
-		channels.append(child)
-		
+		data, addr = actual.recv(1024)
+		print data
 		
 		
 		

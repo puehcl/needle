@@ -2,6 +2,7 @@
 import threading
 import time
 import socket
+import Queue
 
 import constants as const
 import packet
@@ -26,11 +27,13 @@ class StreamListener(threading.Thread):
 
 class StreamManager(threading.Thread):
 		
-	def __init__(self, sock, agent_address, host=False):
+	def __init__(self, sock, agent_address):
 		threading.Thread.__init__(self)
 		self.sock = sock
 		self.agent_address = agent_address
 		self.terminate = False
+		self.input_queue = Queue.Queue()
+		self.output_queue = Queue.Queue()
 		
 	def run(self):
 		print "sting activated"
@@ -95,5 +98,16 @@ class StreamManager(threading.Thread):
 		
 		print "got success packet, connection to other agent open"
 		
+	def recv(self):
+		return self.input_queue.get(True)
+		
+	def send(data):
+		self.output_queue.put(data)
+		
 	def shutdown(self):
 		self.terminate = True
+		
+		
+		
+		
+		

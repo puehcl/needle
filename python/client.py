@@ -17,14 +17,8 @@ dataprovider = None
 active_processes = []
 
 def shutdown_handler(signal, frame):
-	for process in active_processes:
-		process.shutdown()
-		process.join()
-		print "process", process.name, "shut down"
-	if dataprovider:
-		dataprovider.shutdown()
-		dataprovider.join()
-		print "listener shut down"
+	client.shutdown()
+	client.join()
 	sys.exit(0)
 
 class ClientDataProvider(multiprocessing.Process):
@@ -32,16 +26,18 @@ class ClientDataProvider(multiprocessing.Process):
 	queries the mediator for a host address and establishes a connection to that host
 	'''
 
-	def __init__(self, sock, clientname, hostname, servicename, mediator_address):
+	def __init__(self, tcp_socket, clientname, hostname, servicename, mediator_address):
 		multiprocessing.Process.__init__(self)
 		self.terminate = False
-		self.sock = sock
+		self.tcp_socket = tcp_socket
+		self.sock = None
 		self.clientname = clientname
 		self.hostname = hostname
 		self.servicename = servicename
 		self.mediator_address = mediator_address
 		
 	def run(self):
+		self.sock = utils.UDPSocket();
 		self.sock.settimeout(REQ_TIMEOUT)
 	
 		req_header = packet.Header(const.TYPE_CONTROL, const.SUBTYPE_REQ_HOST, 1)
@@ -98,17 +94,72 @@ class ClientDataProvider(multiprocessing.Process):
 				
 	def shutdown(self):
 		self.terminate = True
-		self.sock.close()
+		if self.sock:
+			self.sock.close()
+
+
+class NeedleClient(threading.Thread):
+
+	LISTEN_TIMEOUT = 0.5
+
+	def __init__(self, local_address, mediator_address, clientname, hostname, servicename):
+		threading.Thread.__init__(self)
+		self.local_address = local_address
+		self.mediator_address = mediator_address
+		self.clientname = clientname
+		self.hostname = hostname
+		self.servicename = servicename
+		self.terminate = False
+		self.ready = False
+		self.providers = []
+		
+	def run(self):
+		self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.tcp_socket.bind(self.local_address)
+		self.tcp_socket.listen(5)
+		self.tcp_socket.settimeout(NeedleClient.LISTEN_TIMEOUT)
+		
+		self.ready = True
+		
+		while not self.terminate:
+			try:
+				new_sock = self.tcp_socket.accept()		
+				dataprovider = ClientDataProvider(new_sock[0], self.clientname, self.hostname, self.servicename, self.mediator_address)
+				dataprovider.start()
+				self.providers.append(dataprovider)
+			except socket.timeout:
+				continue
+		
+	def is_ready(self):
+		return self.ready
+		
+	def shutdown(self):
+		self.terminate = True
+		for provider in self.providers:
+			provider.shutdown()
+			provider.join()
 
 if __name__ == "__main__":
 	signal.signal(signal.SIGINT, shutdown_handler)
 
-	sock = utils.UDPSocket();
+	local_address = ("127.0.0.1", 30000)
+	mediator_address = ("127.0.0.1", 20000)
+
+	client = NeedleClient(local_address, mediator_address, "testclient", "testhost", "testservice")
+	client.start()
 	
-	dataprovider = ClientDataProvider(sock, "testclient", "testhost", "testservice", ("127.0.0.1", 20000))
-	dataprovider.start()
+	while not client.is_ready():
+		time.sleep(1)
 	
-	dataprovider.join()
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.connect(local_address)
+	
+	print "socket open, waiting for input"
+	
+	while True:
+		inp = raw_input()
+		sock.send(inp)
+	
 	
 	
 	
