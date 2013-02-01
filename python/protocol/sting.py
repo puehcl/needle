@@ -34,6 +34,7 @@ class StreamManager(threading.Thread):
 		self.terminate = False
 		self.input_queue = Queue.Queue()
 		self.output_queue = Queue.Queue()
+		self.timeout = 0
 		
 	def run(self):
 		print "sting activated"
@@ -99,10 +100,16 @@ class StreamManager(threading.Thread):
 		print "got success packet, connection to other agent open"
 		
 	def recv(self):
-		return self.input_queue.get(True)
+		try:
+			return self.input_queue.get(True, self.timeout)
+		except Queue.Empty:
+			raise socket.timeout
 		
 	def send(data):
 		self.output_queue.put(data)
+		
+	def settimeout(self, timeout):
+		self.timeout = timeout
 		
 	def shutdown(self):
 		self.terminate = True

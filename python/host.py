@@ -79,18 +79,22 @@ class HostDataProvider(multiprocessing.Process):
 		ip = ".".join([str(b) for b in ip_bytes])
 				
 		datastream = sting.StreamManager(self.sock, (ip, port))
+		datastream.settimeout(1)
 		datastream.start()
 		
 		self.relay_socket.connect(self.relay_address)
 		
 		while not self.terminate:
 			print "reading data from datastream"
-			data = datastream.recv()
-			if not data:
-				print "datastream returned not, connection closed"
-				self.shutdown()
-				break
-			self.relay_socket.send(data)
+			try:
+				data = datastream.recv()
+				if not data:
+					print "datastream returned not, connection closed"
+					self.shutdown()
+					break
+				self.relay_socket.send(data)
+			except socket.timeout:
+				continue
 					
 		datastream.shutdown()
 		datastream.join()
