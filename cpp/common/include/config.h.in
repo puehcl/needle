@@ -1,3 +1,0 @@
-
-#define VERSION_MAJOR @needle_VERSION_MAJOR@
-#define VERSION_MINOR @needle_VERSION_MINOR@
