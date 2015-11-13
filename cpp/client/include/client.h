@@ -3,22 +3,28 @@
 #define CLIENT_CLIENT_H
 
 #include <string>
+#include <thread>
+
+#include <boost/asio.hpp>
 
 class Client {
 private:
-    ::std::string mediator_host_name_;
-    ::std::string local_interface_;
-    int mediator_port_;
-    int local_port_;
-public:
-    Client( ::std::string mediator_host_name, int mediator_port,
-            ::std::string local_interface, int local_port) :
-        mediator_host_name_(mediator_host_name),
-        mediator_port_(mediator_port),
-        local_interface_(local_interface),
-        local_port_(local_port) {};
+  bool shutdown_{false};
+  boost::asio::ip::address mediator_host_name_;
+  boost::asio::ip::address local_interface_;
+  unsigned short mediator_port_;
+  unsigned short local_port_;
+  boost::asio::io_service ioservice_;
+  boost::asio::ip::tcp::acceptor local_acceptor_;
 
-    void Run();
+  void PrepareAcceptor();
+  void StartAccept();
+  void CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket);
+public:
+  Client( std::string mediator_host_name, unsigned short mediator_port,
+          std::string local_interface,    unsigned short local_port);
+  void Run();
+  void Shutdown();
 };
 
 #endif

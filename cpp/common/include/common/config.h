@@ -1,6 +1,9 @@
 #ifndef COMMON_CONFIG_H
 #define COMMON_CONFIG_H
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
