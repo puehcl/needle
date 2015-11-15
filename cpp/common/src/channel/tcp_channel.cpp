@@ -5,34 +5,28 @@ TCPChannel::TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
   socket_ = std::move(socket);
 }
 
-void TCPChannel::AsyncRead() {
-  socket_->async_read_some(
-    boost::asio::buffer(buffer_),
-    std::bind(
-      &TCPChannel::AsyncReadHandler,
-      this,
-      std::placeholders::_1,
-      std::placeholders::_2
-  ));
+void TCPChannel::Write(Buffer buffer) {
+  //send all data in the buffer
+  boost::asio::write(*socket_, boost::asio::buffer(buffer, buffer.size()));
 }
 
-void TCPChannel::AsyncReadHandler(  const boost::system::error_code &ec,
-                                    const std::size_t& bytes_read) {
-  if(!ec) {
-    callback_(buffer_, bytes_read);
-    AsyncRead();
-  }
-}
-
-void TCPChannel::OnRead(CallbackFunction callback) {
-  callback_ = callback;
-  AsyncRead();
-}
-
-void TCPChannel::Write(Buffer& buffer) {
-
+Channel::Buffer TCPChannel::Read() {
+  std::size_t bytes_read;
+  Buffer buffer(TCP_BUFFER_SIZE);
+  bytes_read = socket_->receive(boost::asio::buffer(buffer));
+  buffer.resize(bytes_read);
+  return buffer;
 }
 
 void TCPChannel::Close() {
+  boost::system::error_code ec;
+  //shutdown send and receive functionality on the socket
+  socket_->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+  if(ec) {
 
+  }
+  socket_->close(ec);
+  if(ec) {
+
+  }
 }
