@@ -14,5 +14,6 @@ add_executable (host ${host_SRC})
 
 target_link_libraries( host
     ${common_LIBRARY}
+    ${Log4cxx_LIBRARIES}
     ${Boost_LIBRARIES}
 )

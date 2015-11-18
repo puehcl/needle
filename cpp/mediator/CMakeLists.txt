@@ -14,5 +14,6 @@ add_executable (mediator ${mediator_SRC})
 
 target_link_libraries( mediator
     ${common_LIBRARY}
+    ${Log4cxx_LIBRARIES}
     ${Boost_LIBRARIES}
 )

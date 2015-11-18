@@ -1,6 +1,10 @@
 
 root = false
 
+[CMakeLists.txt]
+indent_style = space
+indent_size = 4
+
 [*.{cpp,h}]
 indent_style = space
 indent_size = 2

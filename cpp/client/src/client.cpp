@@ -5,7 +5,7 @@
 
 #include "common/channel/channel.h"
 #include "common/channel/tcp_channel.h"
-#include "common/logging/logging.h"
+#include "common/logging/logger.h"
 #include "common/session/session.h"
 #include "common/session/local_session.h"
 
@@ -14,7 +14,9 @@
 
 Client::Client( std::string mediator_host_name, unsigned short mediator_port,
                 std::string local_interface,    unsigned short local_port)
-              : mediator_port_(mediator_port), local_port_(local_port),
+              : logger_(common::logging::GetLogger("Client")),
+                mediator_port_(mediator_port), 
+                local_port_(local_port),
                 local_acceptor_(ioservice_) {
   mediator_host_name_ =
     boost::asio::ip::address::from_string(mediator_host_name);
@@ -23,7 +25,7 @@ Client::Client( std::string mediator_host_name, unsigned short mediator_port,
 }
 
 void Client::Run(void) {
-  std::cout << "entering run" << std::endl;
+  logger_->Trace("entering", " Run ", 5);
 
   PrepareAcceptor();
   StartAccept();

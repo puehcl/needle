@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include "common/channel/channel.h"
 

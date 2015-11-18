@@ -1,4 +1,6 @@
 
+#include <boost/asio/write.hpp>
+
 #include "common/channel/tcp_channel.h"
 
 TCPChannel::TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {

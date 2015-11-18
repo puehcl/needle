@@ -7,8 +7,11 @@
 
 #include <boost/asio.hpp>
 
+#include "common/logging/logger.h"
+
 class Client {
 private:
+  common::logging::Logger::ptr logger_;
   bool shutdown_{false};
   boost::asio::ip::address mediator_host_name_;
   boost::asio::ip::address local_interface_;
