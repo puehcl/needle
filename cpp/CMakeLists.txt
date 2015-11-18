@@ -3,6 +3,7 @@ project (needle)
 
 set (needle_VERSION_MAJOR 0)
 set (needle_VERSION_MINOR 1)
+set (needle_LOG_LEVEL 0)
 
 set (CMAKE_VERBOSE_MAKEFILE true)
 

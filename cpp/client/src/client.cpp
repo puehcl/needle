@@ -25,7 +25,7 @@ Client::Client( std::string mediator_host_name, unsigned short mediator_port,
 }
 
 void Client::Run(void) {
-  logger_->Trace("entering", " Run ", 5);
+  logger_->Trace("entering Run");
 
   PrepareAcceptor();
   StartAccept();
@@ -53,7 +53,7 @@ void Client::PrepareAcceptor() {
  * runs/blocks until the client is shut down
  */
 void Client::StartAccept() {
-  std::cout << "entering accept" << std::endl;
+  logger_->Trace("entering StartAccept");
   bool timeout = false;
   //create a new socket which will be initialized when a new
   //connection is accepted
@@ -65,11 +65,11 @@ void Client::StartAccept() {
     if(!timeout) {
       socket.reset(new boost::asio::ip::tcp::socket(ioservice_));
     }
-    std::cout << "calling accept" << std::endl;
+    logger_->Info("Waiting for new connection...");
     //accept connections on the server socket and initilize the given socket
     //with the new connection
     local_acceptor_.accept(*socket);
-    std::cout << "connection accepted" << std::endl;
+    logger_->Info("New connection accepted: ", socket->remote_endpoint());
     //further process the socket, create a relay between local connection
     //and the server
     CreateRelay(std::move(socket));
