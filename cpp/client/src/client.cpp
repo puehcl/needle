@@ -61,12 +61,12 @@ void Client::StartAccept() {
     new boost::asio::ip::tcp::socket(ioservice_));
   //run until client is shut down
   while(!shutdown_) {
-    //if an accept timeout occured, create new socket
+    //if an accept timeout occurred, create new socket
     if(!timeout) {
       socket.reset(new boost::asio::ip::tcp::socket(ioservice_));
     }
     logger_->Info("Waiting for new connection...");
-    //accept connections on the server socket and initilize the given socket
+    //accept connections on the server socket and initialize the given socket
     //with the new connection
     local_acceptor_.accept(*socket);
     logger_->Info("New connection accepted: ", socket->remote_endpoint());
@@ -81,6 +81,16 @@ void Client::CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
   std::unique_ptr<Session> local_session(
     new LocalSession(std::move(local_channel)));
   std::unique_ptr<Session> mediator_session(new MediatorSession());
+  relays_.push_back(std::unique_ptr<common::relay::Relay>(
+    new common::relay::Relay(
+      common::relay::GetNextUID(),
+      std::move(local_session), 
+      std::move(mediator_session), 
+      std::bind(&Client::OnRelayFinished, this, std::placeholders::_1))));
+}
+
+void Client::OnRelayFinished(const common::relay::Relay& relay) {
+  
 }
 
 void Client::Shutdown() {
