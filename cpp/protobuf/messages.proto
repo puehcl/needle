@@ -1,0 +1,33 @@
+
+syntax = "proto2";
+
+package protobuf;
+
+message Message {
+    enum Type {
+        CONTROL = 0;
+        DATA    = 1;
+    }
+
+    required Type type                      = 1;
+    optional ControlMessage controlMessage  = 2;
+    optional DataMessage dataMessage        = 3;
+
+}
+
+message ControlMessage {
+    enum Type {
+        KEEP_ALIVE                  = 0;
+        HOST_REGISTER_REQUEST       = 1;
+        HOST_REGISTER_RESPONSE      = 2;
+        CLIENT_MEDIATION_REQUEST    = 3;
+        CLIENT_MEDIATION_RESPONSE   = 4;
+        HOST_MEDIATION_RESPONSE     = 5;
+        HOST_CLIENT_PUNCH_REQUEST   = 6;
+        HOST_CLIENT_PUNCH_ACK       = 7;
+    }
+}
+
+message DataMessage {
+
+}
