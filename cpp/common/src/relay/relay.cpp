@@ -7,8 +7,13 @@ namespace common {
  
     std::uint64_t relay_uid_{0};
     
-    std::uint64_t GetNextUID() {
+    const std::uint64_t GetNextUID() {
       relay_uid_ = relay_uid_ + 1;
+      return relay_uid_;
+    }
+    
+    void Relay::Start() { 
+      
     }
     
   }

@@ -2,9 +2,11 @@
 #ifndef CLIENT_CLIENT_H
 #define CLIENT_CLIENT_H
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include <boost/asio.hpp>
 
@@ -21,7 +23,8 @@ private:
   unsigned short local_port_;
   boost::asio::io_service ioservice_;
   boost::asio::ip::tcp::acceptor local_acceptor_;
-  std::vector<common::relay::Relay> relays_;
+  std::unordered_map< std::uint64_t, 
+                      std::unique_ptr<common::relay::Relay>> relays_;
 
   void PrepareAcceptor();
   void StartAccept();

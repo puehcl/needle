@@ -61,13 +61,14 @@ void Client::StartAccept() {
     new boost::asio::ip::tcp::socket(ioservice_));
   //run until client is shut down
   while(!shutdown_) {
-    //if an accept timeout occurred, create new socket
+    //if no accept timeout occurred, create new socket because the one in the
+    //local unique_ptr is now NULL (moved to CreateRelay)
     if(!timeout) {
       socket.reset(new boost::asio::ip::tcp::socket(ioservice_));
     }
-    logger_->Info("Waiting for new connection...");
     //accept connections on the server socket and initialize the given socket
     //with the new connection
+    logger_->Info("Waiting for new connection...");
     local_acceptor_.accept(*socket);
     logger_->Info("New connection accepted: ", socket->remote_endpoint());
     //further process the socket, create a relay between local connection
@@ -77,20 +78,23 @@ void Client::StartAccept() {
 }
 
 void Client::CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
-  std::unique_ptr<Channel> local_channel(new TCPChannel(std::move(socket)));
-  std::unique_ptr<Session> local_session(
-    new LocalSession(std::move(local_channel)));
-  std::unique_ptr<Session> mediator_session(new MediatorSession());
-  relays_.push_back(std::unique_ptr<common::relay::Relay>(
-    new common::relay::Relay(
-      common::relay::GetNextUID(),
-      std::move(local_session), 
-      std::move(mediator_session), 
-      std::bind(&Client::OnRelayFinished, this, std::placeholders::_1))));
+  std::unique_ptr<common::channel::Channel> local_channel(
+    new common::channel::TCPChannel(std::move(socket)));
+  std::unique_ptr<common::session::Session> local_session(
+    new common::session::LocalSession(std::move(local_channel)));
+  std::unique_ptr<common::session::Session> mediator_session(
+  new MediatorSession());
+  std::uint64_t relay_uid = common::relay::GetNextUID();
+  std::unique_ptr<common::relay::Relay> relay(new common::relay::Relay(
+    relay_uid,
+    std::move(local_session), 
+    std::move(mediator_session), 
+    std::bind(&Client::OnRelayFinished, this, std::placeholders::_1)));
+  relays_.insert(std::make_pair(relay_uid, std::move(relay)));
 }
 
 void Client::OnRelayFinished(const common::relay::Relay& relay) {
-  
+  relays_.erase(relay.get_uid());
 }
 
 void Client::Shutdown() {

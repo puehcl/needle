@@ -16,24 +16,26 @@ namespace common {
       using CallbackFunction = std::function<void(const Relay&)>;
       
       const std::uint64_t uid_;
-      const std::unique_ptr<Session> session1_;
-      const std::unique_ptr<Session> session2_;
+      const std::unique_ptr<common::session::Session> session1_;
+      const std::unique_ptr<common::session::Session> session2_;
       const CallbackFunction on_finish_callback_;
       std::unique_ptr<std::thread> thread_;
     public:
       Relay(  std::uint64_t uid,
-              std::unique_ptr<Session>& session1,
-              std::unique_ptr<Session>& session2,
+              std::unique_ptr<common::session::Session> session1,
+              std::unique_ptr<common::session::Session> session2,
               CallbackFunction on_finish_callback)
         : uid_(uid),
           session1_(std::move(session1)),
           session2_(std::move(session2)),
           on_finish_callback_(on_finish_callback) {}
         
-        std::uint64_t get_uid() { return uid_; }
+        void Start();
+        
+        const std::uint64_t& get_uid() const { return uid_; }
     };
     
-    std::uint64_t GetNextUID();
+    const std::uint64_t GetNextUID();
     
   }
 }

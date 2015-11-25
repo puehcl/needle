@@ -9,14 +9,20 @@
 
 #include "common/channel/channel.h"
 
-class TCPChannel : public Channel {
-private:
-  std::unique_ptr<boost::asio::ip::tcp::socket> socket_;
-public:
-  TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket);
-  virtual void Write(Buffer buffer) override;
-  virtual Buffer Read() override;
-  virtual void Close();
-};
+namespace common {
+  namespace channel {
+
+    class TCPChannel : public Channel {
+    private:
+      std::unique_ptr<boost::asio::ip::tcp::socket> socket_;
+    public:
+      TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket);
+      virtual void Write(Buffer buffer) override;
+      virtual Buffer Read() override;
+      virtual void Close();
+    };
+
+  }
+}
 
 #endif

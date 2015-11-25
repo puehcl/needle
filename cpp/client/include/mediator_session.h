@@ -3,12 +3,12 @@
 
 #include "common/session/session.h"
 
-class MediatorSession : public Session {
+class MediatorSession : public common::session::Session {
 public:
   //MediatorSession() : Session(std::unique_ptr<Channel>(new UDPChannel())) {}
-  MediatorSession() : Session(std::unique_ptr<Channel>()) {}
-  void OnReadMessage(CallbackFunction callback);
-  void SendMessage(protobuf::DataMessage& message);
+  MediatorSession() : Session(std::unique_ptr<common::channel::Channel>()) {}
+  virtual void ReadNextMessage(protobuf::DataMessage& message) override;
+  virtual void SendMessage(protobuf::DataMessage& message) override;
 };
 
 #endif

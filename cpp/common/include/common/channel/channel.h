@@ -3,14 +3,20 @@
 
 #include <vector>
 
-class Channel {
-public:
-  using Buffer = std::vector<char>;
+namespace common {
+  namespace channel {
+    
+    class Channel {
+    public:
+      using Buffer = std::vector<char>;
 
-  virtual ~Channel() {};
-  virtual void Write(Buffer buffer) = 0;
-  virtual Buffer Read() = 0;
-  virtual void Close() = 0;
-};
+      virtual ~Channel() {};
+      virtual void Write(Buffer buffer) = 0;
+      virtual Buffer Read() = 0;
+      virtual void Close() = 0;
+    };   
+    
+  }
+}
 
 #endif
