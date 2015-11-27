@@ -11,17 +11,16 @@ namespace common {
       socket_ = std::move(socket);
     }
 
-    void TCPChannel::Write(Buffer buffer) {
+    void TCPChannel::Write(std::string buffer) {
       //send all data in the buffer
       boost::asio::write(*socket_, boost::asio::buffer(buffer, buffer.size()));
     }
 
-    Channel::Buffer TCPChannel::Read() {
+    std::string TCPChannel::Read() {
       std::size_t bytes_read;
-      Buffer buffer(TCP_BUFFER_SIZE);
+      char buffer[TCP_BUFFER_SIZE];
       bytes_read = socket_->receive(boost::asio::buffer(buffer));
-      buffer.resize(bytes_read);
-      return buffer;
+      return std::string(buffer, bytes_read);
     }
 
     void TCPChannel::Close() {

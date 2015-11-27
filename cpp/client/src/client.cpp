@@ -11,6 +11,7 @@
 
 #include "client.h"
 #include "mediator_session.h"
+#include "common/channel/console_channel.h"
 
 Client::Client( std::string mediator_host_name, unsigned short mediator_port,
                 std::string local_interface,    unsigned short local_port)
@@ -78,22 +79,29 @@ void Client::StartAccept() {
 }
 
 void Client::CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
+  logger_->Trace("Entering CreateRelay()");
+  //create channel for local connection (needle_client <-> client)
   std::unique_ptr<common::channel::Channel> local_channel(
     new common::channel::TCPChannel(std::move(socket)));
   std::unique_ptr<common::session::Session> local_session(
     new common::session::LocalSession(std::move(local_channel)));
-  std::unique_ptr<common::session::Session> mediator_session(
-  new MediatorSession());
+  //create channel for mediator/p2p (needle_client <-> mediator)
+  std::unique_ptr<common::channel::Channel> remote_channel(
+    new common::channel::ConsoleChannel());
+  std::unique_ptr<common::session::Session> remote_session(
+    new common::session::LocalSession(std::move(remote_channel)));
   std::uint64_t relay_uid = common::relay::GetNextUID();
   std::unique_ptr<common::relay::Relay> relay(new common::relay::Relay(
     relay_uid,
     std::move(local_session), 
-    std::move(mediator_session), 
+    std::move(remote_session), 
     std::bind(&Client::OnRelayFinished, this, std::placeholders::_1)));
+  relay->Start();
   relays_.insert(std::make_pair(relay_uid, std::move(relay)));
 }
 
-void Client::OnRelayFinished(const common::relay::Relay& relay) {
+void Client::OnRelayFinished(common::relay::Relay& relay) {
+  logger_->Info("Relay ", relay.get_uid(), " finished, deleting");
   relays_.erase(relay.get_uid());
 }
 

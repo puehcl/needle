@@ -29,7 +29,7 @@ private:
   void PrepareAcceptor();
   void StartAccept();
   void CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket);
-  void OnRelayFinished(const common::relay::Relay& relay);
+  void OnRelayFinished(common::relay::Relay& relay);
 public:
   Client( std::string mediator_host_name, unsigned short mediator_port,
           std::string local_interface,    unsigned short local_port);

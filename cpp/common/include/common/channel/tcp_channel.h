@@ -17,9 +17,9 @@ namespace common {
       std::unique_ptr<boost::asio::ip::tcp::socket> socket_;
     public:
       TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket);
-      virtual void Write(Buffer buffer) override;
-      virtual Buffer Read() override;
-      virtual void Close();
+      virtual void Write(std::string buffer) override;
+      virtual std::string Read() override;
+      virtual void Close() override;
     };
 
   }

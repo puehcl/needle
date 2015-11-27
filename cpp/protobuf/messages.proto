@@ -29,5 +29,5 @@ message ControlMessage {
 }
 
 message DataMessage {
-
+    required bytes data = 1;
 }

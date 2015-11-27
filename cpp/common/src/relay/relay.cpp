@@ -1,5 +1,8 @@
 
+#include <thread>
+
 #include "common/relay/relay.h"
+#include "messages.pb.h"
 
 namespace common {
   
@@ -13,7 +16,27 @@ namespace common {
     }
     
     void Relay::Start() { 
-      
+      logger_->Trace("Entering Start()");
+      thread_ = std::thread([this]() {
+        std::thread direction1([this]() {
+          protobuf::DataMessage message;
+          while(true) {
+            session1_->ReadNextMessage(message);
+            session2_->SendMessage(message);
+          }
+        });
+        std::thread direction2([this]() {
+          protobuf::DataMessage message;
+          while(true) {
+            session2_->ReadNextMessage(message);
+            session1_->SendMessage(message);
+          }
+        });
+        direction1.join();
+        direction2.join();
+        on_finish_callback_(*this);
+      });
+      thread_.detach();
     }
     
   }

@@ -15,5 +15,7 @@ add_executable (client ${client_SRC})
 target_link_libraries( client
     ${common_LIBRARY}
     ${Log4cxx_LIBRARIES}
+    ${Protobuf_PROJECT_LIBRARY}
+    ${PROTOBUF_LIBRARIES}
     ${Boost_LIBRARIES}
 )

@@ -14,6 +14,6 @@ get_filename_component (INCLUDE_DIR ${protobuf_HDRS} DIRECTORY)
 ## file (COPY ${protobuf_HDRS} DESTINATION ${INCLUDE_DIR}/protobuf)
 
 ## define the protobuf library
-set (protobuf_HDRS      ${INCLUDE_DIR}  PARENT_SCOPE)
-set (protobuf_LIBRARY   protobuf        PARENT_SCOPE)
+set (protobuf_HDRS              ${INCLUDE_DIR}  PARENT_SCOPE)
+set (Protobuf_PROJECT_LIBRARY   protobuf        PARENT_SCOPE)
 add_library (protobuf ${protobuf_SRCS})
