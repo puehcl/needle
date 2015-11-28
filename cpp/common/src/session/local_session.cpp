@@ -6,13 +6,30 @@ namespace common {
     
     void LocalSession::ReadNextMessage(protobuf::DataMessage& message) {
       logger_->Trace("Entering ReadNextMessage");
-      message.set_data(channel_->Read());
+      try {
+        message.set_data(channel_->Read());
+      } catch(const common::channel::IOException& ex) {
+        throw SessionException();
+      }  
     }
 
     void LocalSession::SendMessage(protobuf::DataMessage& message) {
       logger_->Trace("Entering SendMessage");
-      channel_->Write(message.data());
+      try {
+        channel_->Write(message.data());
+      } catch(const common::channel::IOException& ex) {
+        throw SessionException();
+      } 
     }    
+    
+    void LocalSession::Close() {
+      logger_->Info("Closing session");
+      channel_->Close();
+    }
+    
+    void LocalSession::Print(std::ostream& os) const {
+      os << "LocalSession[" << *channel_ << "]";
+    }
     
   }
 }

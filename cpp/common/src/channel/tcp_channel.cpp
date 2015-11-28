@@ -1,7 +1,10 @@
 
+//#include <iostream>
+
 #include <boost/asio/write.hpp>
 
 #include "common/channel/tcp_channel.h"
+
 
 namespace common {
   namespace channel {
@@ -13,13 +16,22 @@ namespace common {
 
     void TCPChannel::Write(std::string buffer) {
       //send all data in the buffer
-      boost::asio::write(*socket_, boost::asio::buffer(buffer, buffer.size()));
+      try {
+        boost::asio::write( *socket_, 
+                            boost::asio::buffer(buffer, buffer.size()));
+      } catch(std::exception& ex) {
+        throw IOException();
+      }
     }
 
     std::string TCPChannel::Read() {
       std::size_t bytes_read;
       char buffer[TCP_BUFFER_SIZE];
-      bytes_read = socket_->receive(boost::asio::buffer(buffer));
+      try {
+        bytes_read = socket_->receive(boost::asio::buffer(buffer));
+      } catch(std::exception& ex) {
+        throw IOException();
+      }
       return std::string(buffer, bytes_read);
     }
 
@@ -34,6 +46,11 @@ namespace common {
       if(ec) {
 
       }
+    }
+    
+    void TCPChannel::Print(std::ostream& stream) const {
+      stream << "TCPChannel [" << socket_->local_endpoint() << "]";
+      stream << " -> [" << socket_->remote_endpoint() << "]";
     }
 
   }

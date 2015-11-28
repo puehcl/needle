@@ -27,5 +27,9 @@ namespace common {
       
     }
     
+    void ConsoleChannel::Print(std::ostream& stream) const {
+      stream << "ConsoleChannel";
+    }
+    
   }
 }

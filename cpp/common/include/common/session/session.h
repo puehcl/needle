@@ -1,6 +1,7 @@
 #ifndef COMMON_SESSION_SESSION_H
 #define COMMON_SESSION_SESSION_H
 
+#include <exception>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -12,6 +13,10 @@
 namespace common {
   namespace session {
  
+    class SessionException : public std::exception {
+      
+    };
+    
     //used to keep the state for the connection with the mediator/peer
     class Session {
     protected:
@@ -22,6 +27,14 @@ namespace common {
       
       virtual void ReadNextMessage(protobuf::DataMessage& message) = 0;
       virtual void SendMessage(protobuf::DataMessage& message) = 0;
+      virtual void Close() = 0;
+      virtual void Print(std::ostream& os) const = 0;
+      
+      friend std::ostream& operator<< ( std::ostream& os, 
+                                        const Session& session) {
+        session.Print(os);
+        return os;
+      }
     };
     
   }

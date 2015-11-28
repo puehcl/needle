@@ -20,6 +20,7 @@ namespace common {
       virtual void Write(std::string buffer) override;
       virtual std::string Read() override;
       virtual void Close() override;
+      virtual void Print(std::ostream& os) const override;
     };
 
   }

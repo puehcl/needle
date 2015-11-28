@@ -17,6 +17,8 @@ namespace common {
 
       virtual void ReadNextMessage(protobuf::DataMessage& message) override;
       virtual void SendMessage(protobuf::DataMessage& message) override;
+      virtual void Close() override;
+      virtual void Print(std::ostream& os) const override;
     };
     
   }
