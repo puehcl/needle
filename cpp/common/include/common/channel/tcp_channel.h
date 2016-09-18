@@ -8,12 +8,14 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include "common/channel/channel.h"
+#include "common/logging/logger.h"
 
 namespace common {
   namespace channel {
 
     class TCPChannel : public Channel {
     private:
+      common::logging::Logger::ptr logger_;
       std::unique_ptr<boost::asio::ip::tcp::socket> socket_;
     public:
       TCPChannel(std::unique_ptr<boost::asio::ip::tcp::socket> socket);

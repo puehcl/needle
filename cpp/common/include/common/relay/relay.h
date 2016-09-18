@@ -11,11 +11,11 @@
 
 namespace common {
   namespace relay {
-    
+
     class Relay {
     private:
       using CallbackFunction = std::function<void(Relay&)>;
-      
+
       common::logging::Logger::ptr logger_;
       const std::uint64_t uid_;
       const std::unique_ptr<common::session::Session> session1_;
@@ -27,16 +27,23 @@ namespace common {
               std::unique_ptr<common::session::Session> session1,
               std::unique_ptr<common::session::Session> session2,
               CallbackFunction on_finish_callback);
-        
+
         void Start();
-        void RelayData( common::session::Session& session1, 
+        void RelayData( common::session::Session& session1,
                         common::session::Session& session2);
-        
+        void Print(std::ostream& stream) const;
+
         const std::uint64_t& get_uid() const { return uid_; }
+
+        friend std::ostream& operator<< ( std::ostream& os,
+                                          const Relay& relay) {
+          relay.Print(os);
+          return os;
+        }
     };
-    
+
     const std::uint64_t GetNextUID();
-    
+
   }
 }
 

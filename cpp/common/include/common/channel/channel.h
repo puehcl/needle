@@ -4,11 +4,22 @@
 #include <exception>
 #include <vector>
 
+#include "common/util/varargs.h"
+
 namespace common {
   namespace channel {
     
     class IOException : public std::exception {
+    private:
+      std::string message_;
+    public:
+      template<typename FstPart, typename... MsgParts>
+      IOException(const FstPart& fst, const MsgParts&... msg): 
+        message_(common::util::varargs::ToString(fst, msg...)) {}
       
+      virtual const char* what() const noexcept override { 
+        return message_.c_str(); 
+      }
     };
     
     class Channel {

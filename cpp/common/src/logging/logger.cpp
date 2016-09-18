@@ -1,23 +1,17 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
-#include <sstream>
-
-#include <log4cxx/logger.h>
-#include <log4cxx/basicconfigurator.h>
-#include <log4cxx/consoleappender.h>
-#include <log4cxx/patternlayout.h>
-
-#include "common/config.h"
 #include "common/logging/logger.h"
 
 namespace common {
-  namespace logging {
-    
-    Logger::ptr GetLogger(std::string name) {
-      return Logger::ptr(new Logger(log4cxx::Logger::getLogger(name)));
-    }
-    
-    namespace detail {
 
+  namespace logging {
+
+    namespace detail {
+      
       static bool configured{Configure()};
       
       bool Configure() {
@@ -47,7 +41,10 @@ namespace common {
         }
       }
       
-    }
+      Logger::ptr GetLoggerFromString(std::string str) {
+        return Logger::ptr(new Logger(log4cxx::Logger::getLogger(str)));
+      }
+      
+    }   
   }
 }
-

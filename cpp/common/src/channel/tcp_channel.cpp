@@ -4,6 +4,7 @@
 #include <boost/asio/write.hpp>
 
 #include "common/channel/tcp_channel.h"
+#include "common/logging/logger.h"
 
 
 namespace common {
@@ -12,15 +13,19 @@ namespace common {
     TCPChannel::TCPChannel(
         std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
       socket_ = std::move(socket);
+      logger_ = common::logging::GetLogger(
+        "TCPChannel[", socket_->remote_endpoint(), "]");
     }
 
     void TCPChannel::Write(std::string buffer) {
       //send all data in the buffer
       try {
-        boost::asio::write( *socket_, 
+        boost::asio::write( *socket_,
                             boost::asio::buffer(buffer, buffer.size()));
       } catch(std::exception& ex) {
-        throw IOException();
+        logger_->Error("Could not write to socket");
+        throw IOException("Cold not write to socket: ",
+          socket_->remote_endpoint());
       }
     }
 
@@ -30,7 +35,9 @@ namespace common {
       try {
         bytes_read = socket_->receive(boost::asio::buffer(buffer));
       } catch(std::exception& ex) {
-        throw IOException();
+        logger_->Error("Could not read from socket");
+        throw IOException("Could not read from socket: ",
+          socket_->local_endpoint());
       }
       return std::string(buffer, bytes_read);
     }
@@ -47,7 +54,7 @@ namespace common {
 
       }
     }
-    
+
     void TCPChannel::Print(std::ostream& stream) const {
       stream << "TCPChannel [" << socket_->local_endpoint() << "]";
       stream << " -> [" << socket_->remote_endpoint() << "]";

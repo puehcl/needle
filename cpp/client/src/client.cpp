@@ -83,6 +83,7 @@ void Client::CreateRelay(std::unique_ptr<boost::asio::ip::tcp::socket> socket) {
   //create channel for local connection (needle_client <-> client)
   std::unique_ptr<common::channel::Channel> local_channel(
     new common::channel::TCPChannel(std::move(socket)));
+  logger_->Debug("After first channel");
   std::unique_ptr<common::session::Session> local_session(
     new common::session::LocalSession(std::move(local_channel)));
   //create channel for mediator/p2p (needle_client <-> mediator)

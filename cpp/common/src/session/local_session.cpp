@@ -1,4 +1,5 @@
 
+#include "common/channel/channel.h"
 #include "common/session/local_session.h"
 
 namespace common {
@@ -9,7 +10,7 @@ namespace common {
       try {
         message.set_data(channel_->Read());
       } catch(const common::channel::IOException& ex) {
-        throw SessionException();
+        throw SessionException(ex);
       }  
     }
 
@@ -18,7 +19,7 @@ namespace common {
       try {
         channel_->Write(message.data());
       } catch(const common::channel::IOException& ex) {
-        throw SessionException();
+        throw SessionException(ex);
       } 
     }    
     
